@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mangione Impact Estimator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #222;
+    }
+
+    h2 {
+      margin-top: 2rem;
+      color: #444;
+    }
+
+    label {
+      display: block;
+      margin: 0.75rem 0;
+      font-weight: 500;
+    }
+
+    input {
+      margin-left: 0.5rem;
+      padding: 0.3rem;
+      font-size: 1rem;
+      width: 80px;
+    }
+
+    button {
+      margin-top: 1.5rem;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      background-color: #0057a0;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #003f7a;
+    }
+
+    #results {
+      margin-top: 2rem;
+      padding: 1rem;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .sources {
+      margin-top: 2rem;
+      font-style: italic;
+      max-width: 800px;
+      background-color: #fefefe;
+      padding: 1rem;
+      border-left: 4px solid #ccc;
+    }
+
+    .sources ul {
+      margin-top: 0.5rem;
+      margin-left: 1.2rem;
+    }
+
+    .sources a {
+      color: #0057a0;
+      text-decoration: none;
+    }
+
+    .sources a:hover {
+      text-decoration: underline;
+    }
+  </style>
+  <script>
+    function calculate() {
+      const totalClaims = 7000000;
+      const oldDenialRate = 0.33;
+      const newDenialRate = parseFloat(document.getElementById('denialRate').value) / 100;
+      const lifeSavingRate = parseFloat(document.getElementById('lifeSavingRate').value) / 100;
+      const payOutOfPocket = parseFloat(document.getElementById('payOut').value) / 100;
+      const altCare = parseFloat(document.getElementById('altCare').value) / 100;
+      const failureToAccess = 1 - (payOutOfPocket + altCare);
+      const deathRate = parseFloat(document.getElementById('deathRate').value) / 100;
+
+      const oldDeniedClaims = totalClaims * oldDenialRate;
+      const newDeniedClaims = totalClaims * newDenialRate;
+
+      const oldLifeSavingDenied = oldDeniedClaims * lifeSavingRate;
+      const newLifeSavingDenied = newDeniedClaims * lifeSavingRate;
+
+      const oldWorsenedOutcomes = oldLifeSavingDenied * failureToAccess;
+      const newWorsenedOutcomes = newLifeSavingDenied * failureToAccess;
+
+      const oldDeaths = oldWorsenedOutcomes * deathRate;
+      const newDeaths = newWorsenedOutcomes * deathRate;
+
+      const livesSaved = oldDeaths - newDeaths;
+
+      const ciLow = livesSaved * 0.8;
+      const ciHigh = livesSaved * 1.2;
+
+      document.getElementById('results').innerHTML = `
+        <h3>Estimated Impact of Lower Denial Rate</h3>
+        <p><strong>Estimated lives saved:</strong> ${livesSaved.toFixed(0)}</p>
+        <p><strong>95% Confidence Interval:</strong> ${ciLow.toFixed(0)} - ${ciHigh.toFixed(0)} lives saved</p>
+        <hr>
+        <p><strong>Old Denial Rate:</strong> 33%</p>
+        <p><strong>New Denial Rate:</strong> ${(newDenialRate * 100).toFixed(1)}%</p>
+        <p><strong>Total Claims (6-month est.):</strong> ${totalClaims.toLocaleString()}</p>
+        <p><strong>Life-saving claims previously denied:</strong> ${oldLifeSavingDenied.toFixed(0)}</p>
+        <p><strong>Life-saving claims now denied:</strong> ${newLifeSavingDenied.toFixed(0)}</p>
+        <p><strong>Estimated deaths before:</strong> ${oldDeaths.toFixed(0)}</p>
+        <p><strong>Estimated deaths after:</strong> ${newDeaths.toFixed(0)}</p>
+      `;
+    }
+  </script>
+</head>
+<body>
+  <h1>Mangione Impact Estimator</h1>
+  <p>This tool estimates how many lives may have been saved if UnitedHealthcare’s claim denial rate dropped following the death of a top executive. You can adjust the assumptions below. This calculator uses real claim volume estimates and medically significant denial rates.</p>
+
+  <h2>Assumptions</h2>
+  <label>New Denial Rate (%) – Old Denial Rate was 33%: 
+    <input type="number" id="denialRate" value="31" step="0.1">
+  </label>
+  <label>Life-Saving Claim Rate (% of total claims): 
+    <input type="number" id="lifeSavingRate" value="0.28" step="0.01">
+  </label>
+  <label>Percent Who Pay Out-of-Pocket (%): 
+    <input type="number" id="payOut" value="70" step="0.1">
+  </label>
+  <label>Percent Who Find Alternative Care (%): 
+    <input type="number" id="altCare" value="20" step="0.1">
+  </label>
+  <label>Death Rate if No Care (%): 
+    <input type="number" id="deathRate" value="25" step="0.1">
+  </label>
+
+  <button onclick="calculate()">Estimate</button>
+
+  <div id="results"></div>
+
+  <div class="sources">
+    <p><strong>Sources:</strong></p>
+    <ul>
+      <li>UnitedHealthcare denied <strong>33%</strong> of in-network claims (14,022,287 total in 2023). Estimate uses 6-month total of 7,000,000 claims.<br>
+        <a href="https://www.kff.org/private-insurance/issue-brief/claims-denials-and-appeals-in-aca-marketplace-plans-in-2023/" target="_blank">
+          Kaiser Family Foundation: Claims Denials and Appeals (2023)
+        </a>
+      </li>
+      <li>Estimated <strong>0.28% of all claims are life-saving</strong>, based on 8,425,900 ER-initiated inpatient OR procedures out of 3 billion total claims annually.
+        <ul>
+          <li>
+            <a href="https://onepercentsteps.com/policy-briefs/real-time-adjudication-for-health-insurance-claims/" target="_blank">
+              One Percent Steps: Real-Time Adjudication Policy Brief
+            </a>
+          </li>
+          <li>
+            <a href="https://hcup-us.ahrq.gov/reports/statbriefs/sb281-Operating-Room-Procedures-During-Hospitalization-2018.jsp" target="_blank">
+              HCUP Statistical Brief #281: OR Procedures from the ER (2018)
+            </a>
+          </li>
+        </ul>
+      </li>
+      <li>72% of denials are for prior auth/referral. 34% of doctors reported prior auth caused serious harm.<br>
+        <a href="https://www.ama-assn.org/system/files/prior-authorization-survey.pdf" target="_blank">
+          AMA Prior Authorization Survey (2022)
+        </a>
+      </li>
+    </ul>
+  </div>
+</body>
+</html>
